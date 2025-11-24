@@ -1,0 +1,113 @@
+name: Create new nix-index
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "36 21 * * 6"
+
+jobs:
+  nixpkgs:
+    name: Get nixpkgs latest commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      commit: ${{ steps.get-commit.outputs.commit }}
+    steps:
+      - id: get-commit
+        run: |
+          BRANCH="nixos-unstable"
+          COMMIT=$(gh api \
+            -H "Accept: application/vnd.github.sha" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/nixos/nixpkgs/commits/${BRANCH}"
+          )
+          echo "commit=${COMMIT}" >> "${GITHUB_OUTPUT}"
+          echo "Using nixpkgs commit ${COMMIT}"
+
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+    permissions:
+      contents: write
+    needs: nixpkgs
+    steps:
+      - id: name
+        run: echo "name=$(date +'%Y-%m-%d-%H%M%S')" >> "${GITHUB_OUTPUT}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.name.outputs.name }}
+          name: ${{ steps.name.outputs.name }}
+          body: >
+            Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/tree/${{ needs.nixpkgs.outputs.commit }})
+          draft: true
+
+  create-index:
+    name: Create index for each system
+    runs-on: ubuntu-latest
+    needs: [ nixpkgs, release ]
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        system: ['x86_64-linux']
+    env:
+      SYSTEM: ${{ matrix.system }}
+    outputs:
+      x86_64-linux: ${{ steps.hash.outputs.x86_64-linux }}
+    steps:
+     - uses: cachix/install-nix-action@v31
+       with:
+         nix_path: nixpkgs=https://github.com/nixos/nixpkgs/archive/${{ needs.nixpkgs.outputs.commit }}.tar.gz
+     - name: Generate index
+       run: |
+         nix-env --file "<nixpkgs>" -iA nix-index
+         echo "generating index"
+         nix-index --path-cache --system "${SYSTEM}" --filter-prefix 67 --compression 0 2>/dev/null
+     - name: Compress index
+       run: |
+         tar -I "zstd -T0 -9" -cf "${SYSTEM}.tar.zst" paths.cache
+         du -h "${SYSTEM}.tar.zst"
+     - name: Upload index to release
+       uses: softprops/action-gh-release@v2
+       with:
+         tag_name: ${{ needs.release.outputs.name }}
+         files: "${{ matrix.system }}.tar.zst"
+         fail_on_unmatched_files: true
+     - name: Get hash of index
+       id: hash
+       run: |
+         mkdir out
+         mv paths.cache out
+         echo "${SYSTEM}=$(nix-hash --type sha256 --sri ./out)" >> "${GITHUB_OUTPUT}"
+
+  finalize-release:
+    runs-on: ubuntu-latest
+    needs: [ create-index, release ]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Update generated.json
+        env:
+          HASHES: ${{ toJSON(needs.create-index.outputs) }}
+          RELEASE_NAME: ${{ needs.release.outputs.name }}
+        run: |
+          echo "${HASHES}" | jq "{hashes: ., url: \"https://github.com/player131007/nix-index-cache/releases/download/${RELEASE_NAME}/\"}" > generated.json
+          git add generated.json
+          git commit -m "update to ${RELEASE_NAME}"
+          git push
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          make_latest: true
+          tag_name: ${{ needs.release.outputs.name }}
+          target_commitish: "main"
