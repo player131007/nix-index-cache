@@ -35,7 +35,8 @@ jobs:
       contents: write
     needs: nixpkgs
     steps:
-      - id: name
+      - name: Create release name
+        id: name
         run: echo "name=$(date +'%Y-%m-%d-%H%M%S')" >> "${GITHUB_OUTPUT}"
       - uses: softprops/action-gh-release@v2
         with:
@@ -66,6 +67,7 @@ jobs:
        run: |
          nix-env --file "<nixpkgs>" -iA nix-index
          echo "generating index"
+         # the prefix doesn't exist because we dont need the database, and it doesnt affect paths.cache
          nix-index --path-cache --system "${SYSTEM}" --filter-prefix 67 --compression 0 2>/dev/null
      - name: Compress index
        run: |
@@ -91,16 +93,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - name: Setup git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Update generated.json
         env:
           HASHES: ${{ toJSON(needs.create-index.outputs) }}
-          RELEASE_NAME: ${{ needs.release.outputs.name }}
+          RELEASE_NAME: ${{ toJSON(needs.release.outputs.name) }}
         run: |
-          echo "${HASHES}" | jq "{hashes: ., url: \"https://github.com/player131007/nix-index-cache/releases/download/${RELEASE_NAME}/\"}" > generated.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          echo "${HASHES}" "${RELEASE_NAME}" | jq -s "{hashes: .[0], release: .[1]}" > generated.json
           git add generated.json
           git commit -m "update to ${RELEASE_NAME}"
           git push
@@ -110,4 +111,4 @@ jobs:
           draft: false
           make_latest: true
           tag_name: ${{ needs.release.outputs.name }}
-          target_commitish: "main"
+          target_commitish: ${{ github.ref_name }}
