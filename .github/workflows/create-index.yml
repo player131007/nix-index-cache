@@ -7,17 +7,18 @@ jobs:
   create-index:
     name: Create index for each system
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        system: ['x86_64-linux']
-    env:
-      SYSTEM: ${{ matrix.system }}
     steps:
      - uses: cachix/install-nix-action@v31
+       with:
+         nix_path: nixpkgs=https://github.com/nixos/nixpkgs/archive/nixpkgs-unstable.tar.gz
+     - uses: mathio/gha-cleanup@v1
+       with:
+         remove-browsers: true
      - name: Generate index
        run: |
-         nix profile install github:player131007/nix-index github:nixos/nixpkgs/nixos-unstable#cargo-flamegraph
-         flamegraph -o graph.svg -- nix-index --path-cache --filter-prefix 67 --compression 0 2>/dev/null
+         sudo sysctl kernel.perf_event_paranoid=-1 kernel.kptr_restrict=0
+           nix-env -i --file "<nixpkgs>" -A cargo-flamegraph -A nix-index
+         flamegraph -- nix-index --path-cache --filter-prefix 67 --compression 0
      - uses: actions/upload-artifact@v4
        with:
-         path: graph.svg
+         path: flamegraph.svg
