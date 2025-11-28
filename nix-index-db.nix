@@ -20,6 +20,6 @@ stdenvNoCC.mkDerivation {
 
   buildCommand = /* bash */ ''
     cd ${nix-index-cache}
-    nix-index ${extraArgs} --path-cache --db=$out 2>/dev/null # too noisy
+    nix-index ${extraArgs} --path-cache --db=$out
   '';
 }
