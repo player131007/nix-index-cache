@@ -19,7 +19,9 @@ stdenvNoCC.mkDerivation {
   unsafeDiscardReferences.out = true;
 
   buildCommand = /* bash */ ''
-    cd ${nix-index-cache}
+    # TODO: https://github.com/nix-community/nix-index/pull/285
+    cp ${nix-index-cache}/paths.cache .
+    chmod +w
     nix-index ${extraArgs} --path-cache --db=$out
   '';
 }
