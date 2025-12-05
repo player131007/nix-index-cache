@@ -4,7 +4,7 @@
   nix-index,
   nix-index-cache,
 
-  extraArgs ? "--compression=9"
+  extraArgs ? "--compression=9",
 }:
 stdenvNoCC.mkDerivation {
   name = "nix-index-db";
@@ -21,7 +21,7 @@ stdenvNoCC.mkDerivation {
   buildCommand = /* bash */ ''
     # TODO: https://github.com/nix-community/nix-index/pull/285
     cp ${nix-index-cache}/paths.cache .
-    chmod +w
+    chmod +w paths.cache
     nix-index ${extraArgs} --path-cache --db=$out
   '';
 }
