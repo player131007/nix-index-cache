@@ -8,7 +8,6 @@
 }:
 stdenvNoCC.mkDerivation {
   name = "nix-index-db";
-  preferLocalBuild = true;
 
   nativeBuildInputs = [
     nix-index
