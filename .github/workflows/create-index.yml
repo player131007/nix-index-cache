@@ -43,7 +43,7 @@ jobs:
           tag_name: ${{ steps.name.outputs.name }}
           name: ${{ steps.name.outputs.name }}
           body: >
-            Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/tree/${{ needs.nixpkgs.outputs.commit }})
+            Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/compare/${{ needs.nixpkgs.outputs.commit }}...nixos-unstable)
           draft: true
 
   create-index:
