@@ -48,6 +48,34 @@ jobs:
             Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/compare/${{ needs.nixpkgs.outputs.commit }}...${{ env.NIXPKGS_BRANCH }})
           draft: true
 
+  build-nix-index:
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.checkout.outputs.commit }}
+    steps:
+     - id: checkout
+       uses: actions/checkout@v6
+       with:
+         repository: "player131007/nix-index"
+     - id: cache
+       uses: actions/cache/restore@v5
+       with:
+         path: nix-index.closure
+         key: nix-index-${{ steps.checkout.outputs.commit }}
+
+     - uses: cachix/install-nix-action@v31
+       if: steps.cache.outputs.cache-hit != 'true'
+     - name: Build nix-index
+       if: steps.cache.outputs.cache-hit != 'true'
+       run: |
+         nix build .#default
+         nix-store --export $(nix-store --query --requisites ./result) > nix-index.closure
+     - uses: actions/cache/save@v5
+       if: steps.cache.outputs.cache-hit != 'true'
+       with:
+         path: nix-index.closure
+         key: nix-index-${{ steps.checkout.outputs.commit }}
+
   create-index:
     name: Create index for each system
     runs-on: ubuntu-latest
@@ -61,14 +89,17 @@ jobs:
       x86_64-linux: ${{ steps.hash.outputs.x86_64-linux }}
     steps:
      - uses: cachix/install-nix-action@v31
+     - uses: actions/cache/restore@v5
        with:
-         nix_path: nixpkgs=https://github.com/nixos/nixpkgs/archive/${{ needs.nixpkgs.outputs.commit }}.tar.gz
-     - name: Generate index
+         path: nix-index.closure
+         key: nix-index-${{ needs.build-nix-index.outputs.commit }}
+     - name: Restore nix-index cache
        run: |
-         nix-env --file "<nixpkgs>" -iA nix-index
-         echo "generating index"
-         # the prefix doesn't exist because we dont need the database, and it doesnt affect paths.cache
-         nix-index --path-cache --system "${{ matrix.system }}" --filter-prefix 67 --compression 0 2>/dev/null
+         nix-store --import < nix-index.closure
+         nix build "github:player131007/nix-index/${{ needs.build-nix-index.outputs.commit }}#default"
+
+     - name: Generate index
+       run: ./result/bin/nix-index --path-cache --system "${{ matrix.system }}" --filter-prefix NON_EXISTENT_PREFIX --nixpkgs "https://github.com/NixOS/nixpkgs/archive/${{ needs.nixpkgs.outputs.commit }}.tar.gz"
      - name: Compress index
        run: |
          tar -I "zstd -T0 -9" -cf "${{ matrix.system }}.tar.zst" paths.cache
