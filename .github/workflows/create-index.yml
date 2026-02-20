@@ -51,14 +51,12 @@ jobs:
   create-index:
     name: Create index for each system
     runs-on: ubuntu-latest
-    needs: [ nixpkgs, release ]
+    needs: [ nixpkgs, release, build-nix-index ]
     permissions:
       contents: write
     strategy:
       matrix:
         system: ['x86_64-linux']
-    env:
-      SYSTEM: ${{ matrix.system }}
     outputs:
       x86_64-linux: ${{ steps.hash.outputs.x86_64-linux }}
     steps:
@@ -70,11 +68,11 @@ jobs:
          nix-env --file "<nixpkgs>" -iA nix-index
          echo "generating index"
          # the prefix doesn't exist because we dont need the database, and it doesnt affect paths.cache
-         nix-index --path-cache --system "${SYSTEM}" --filter-prefix 67 --compression 0 2>/dev/null
+         nix-index --path-cache --system "${{ matrix.system }}" --filter-prefix 67 --compression 0 2>/dev/null
      - name: Compress index
        run: |
-         tar -I "zstd -T0 -9" -cf "${SYSTEM}.tar.zst" paths.cache
-         du -h "${SYSTEM}.tar.zst"
+         tar -I "zstd -T0 -9" -cf "${{ matrix.system }}.tar.zst" paths.cache
+         du -h "${{ matrix.system }}.tar.zst"
      - name: Upload index to release
        uses: softprops/action-gh-release@v2
        with:
@@ -86,7 +84,7 @@ jobs:
        run: |
          mkdir out
          mv paths.cache out
-         echo "${SYSTEM}=$(nix-hash --type sha256 --sri ./out)" >> "${GITHUB_OUTPUT}"
+         echo "${{ matrix.system }}=$(nix-hash --type sha256 --sri ./out)" >> "${GITHUB_OUTPUT}"
 
   finalize-release:
     runs-on: ubuntu-latest
@@ -105,7 +103,7 @@ jobs:
 
           echo "${HASHES}" "${RELEASE_NAME}" | jq -s "{hashes: .[0], release: .[1]}" > generated.json
           git add generated.json
-          git commit -m "update to ${RELEASE_NAME}"
+          git commit -m "release ${RELEASE_NAME}"
           git push
       - name: Release
         uses: softprops/action-gh-release@v2
