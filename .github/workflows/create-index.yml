@@ -42,8 +42,8 @@ jobs:
         run: echo "name=$(date +'%Y-%m-%d-%H%M%S')" >> "${GITHUB_OUTPUT}"
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.name.outputs.name }}
           name: ${{ steps.name.outputs.name }}
+          tag_name: ${{ steps.name.outputs.name }}
           body: >
             Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/compare/${{ needs.nixpkgs.outputs.commit }}...${{ env.NIXPKGS_BRANCH }})
           draft: true
@@ -107,7 +107,9 @@ jobs:
      - name: Upload index to release
        uses: softprops/action-gh-release@v2
        with:
+         name: ${{ needs.release.outputs.name }}
          tag_name: ${{ needs.release.outputs.name }}
+         draft: true
          files: "${{ matrix.system }}.tar.zst"
          fail_on_unmatched_files: true
      - name: Get hash of index
@@ -125,6 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Update generated.json
+        id: update
         env:
           HASHES: ${{ toJSON(needs.create-index.outputs) }}
           RELEASE_NAME: ${{ toJSON(needs.release.outputs.name) }}
@@ -139,7 +142,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ needs.release.outputs.name }}
+          tag_name: ${{ needs.release.outputs.name }}
           draft: false
           make_latest: true
-          tag_name: ${{ needs.release.outputs.name }}
-          target_commitish: ${{ github.ref_name }}
