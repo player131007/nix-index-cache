@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "36 21 * * 6"
 
+env:
+  NIXPKGS_BRANCH: "nixos-unstable"
+
 jobs:
   nixpkgs:
     name: Get nixpkgs latest commit
@@ -18,11 +21,10 @@ jobs:
     steps:
       - id: get-commit
         run: |
-          BRANCH="nixos-unstable"
           COMMIT=$(gh api \
             -H "Accept: application/vnd.github.sha" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/nixos/nixpkgs/commits/${BRANCH}"
+            "/repos/nixos/nixpkgs/commits/${NIXPKGS_BRANCH}"
           )
           echo "commit=${COMMIT}" >> "${GITHUB_OUTPUT}"
           echo "Using nixpkgs commit ${COMMIT}"
@@ -43,7 +45,7 @@ jobs:
           tag_name: ${{ steps.name.outputs.name }}
           name: ${{ steps.name.outputs.name }}
           body: >
-            Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/compare/${{ needs.nixpkgs.outputs.commit }}...nixos-unstable)
+            Generated from nixpkgs commit [${{ needs.nixpkgs.outputs.commit }}](https://github.com/NixOS/nixpkgs/compare/${{ needs.nixpkgs.outputs.commit }}...${{ env.NIXPKGS_BRANCH }})
           draft: true
 
   create-index:
