@@ -125,6 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Update generated.json
+        id: update
         env:
           HASHES: ${{ toJSON(needs.create-index.outputs) }}
           RELEASE_NAME: ${{ toJSON(needs.release.outputs.name) }}
@@ -135,6 +136,7 @@ jobs:
           echo "${HASHES}" "${RELEASE_NAME}" | jq -s "{hashes: .[0], release: .[1]}" > generated.json
           git add generated.json
           git commit -m "release ${RELEASE_NAME}"
+          echo "commit=$(git log -n 1 --pretty=format:"%H")" >> "${GITHUB_OUTPUT}"
           git push
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -142,4 +144,4 @@ jobs:
           draft: false
           make_latest: true
           tag_name: ${{ needs.release.outputs.name }}
-          target_commitish: ${{ github.ref_name }}
+          target_commitish: ${{ steps.update.outputs.commit }}
