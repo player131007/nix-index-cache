@@ -63,7 +63,7 @@ jobs:
          path: nix-index.closure
          key: nix-index-${{ steps.checkout.outputs.commit }}
 
-     - uses: cachix/install-nix-action@v31
+     - uses: cachix/install-nix-action@v31.10.5
        if: steps.cache.outputs.cache-hit != 'true'
      - name: Build nix-index
        if: steps.cache.outputs.cache-hit != 'true'
@@ -88,7 +88,7 @@ jobs:
     outputs:
       x86_64-linux: ${{ steps.hash.outputs.x86_64-linux }}
     steps:
-     - uses: cachix/install-nix-action@v31
+     - uses: cachix/install-nix-action@v31.10.5
      - uses: actions/cache/restore@v5
        with:
          path: nix-index.closure
