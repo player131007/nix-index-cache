@@ -40,7 +40,7 @@ jobs:
       - name: Create release name
         id: name
         run: echo "name=$(date +'%Y-%m-%d-%H%M%S')" >> "${GITHUB_OUTPUT}"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: ${{ steps.name.outputs.name }}
           tag_name: ${{ steps.name.outputs.name }}
@@ -105,7 +105,7 @@ jobs:
          tar -I "zstd -T0 -9" -cf "${{ matrix.system }}.tar.zst" paths.cache
          du -h "${{ matrix.system }}.tar.zst"
      - name: Upload index to release
-       uses: softprops/action-gh-release@v2
+       uses: softprops/action-gh-release@v3
        with:
          name: ${{ needs.release.outputs.name }}
          tag_name: ${{ needs.release.outputs.name }}
@@ -140,7 +140,7 @@ jobs:
           git commit -m "release ${RELEASE_NAME}"
           git push
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ needs.release.outputs.name }}
           tag_name: ${{ needs.release.outputs.name }}
