@@ -54,7 +54,7 @@ jobs:
       commit: ${{ steps.checkout.outputs.commit }}
     steps:
      - id: checkout
-       uses: actions/checkout@v6
+       uses: actions/checkout@v6.0.2
        with:
          repository: "player131007/nix-index"
      - id: cache
@@ -125,7 +125,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
       - name: Update generated.json
         id: update
         env:
