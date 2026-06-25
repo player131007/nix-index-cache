@@ -1,23 +1,9 @@
-{
-  pkgs,
-  system ? pkgs.stdenv.hostPlatform.system,
-}:
+{ pkgs }:
 let
-  generated = builtins.fromJSON (builtins.readFile ./generated.json);
-
-  nix-index-cache = pkgs.fetchzip {
-    url = "https://github.com/player131007/nix-index-cache/releases/download/${generated.release}/${system}.tar.zst";
-    hash = generated.hashes.${system};
-    stripRoot = false;
-
-    nativeBuildInputs = [ pkgs.zstd ];
-    derivationArgs = {
-      __structuredAttrs = true;
-      unsafeDiscardReferences.out = true;
-    };
+  nix-index-cache = pkgs.callPackage ./nix-index-cache.nix {
+    inherit (pkgs.stdenv.hostPlatform) system;
   };
 in
-assert generated.hashes ? ${system};
 {
   inherit nix-index-cache;
 
