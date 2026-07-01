@@ -58,7 +58,7 @@ jobs:
        with:
          repository: "player131007/nix-index"
      - id: cache
-       uses: actions/cache/restore@v5
+       uses: actions/cache/restore@v6.1.0
        with:
          path: nix-index.closure
          key: nix-index-${{ steps.checkout.outputs.commit }}
@@ -70,7 +70,7 @@ jobs:
        run: |
          nix build .#default
          nix-store --export $(nix-store --query --requisites ./result) > nix-index.closure
-     - uses: actions/cache/save@v5
+     - uses: actions/cache/save@v6.1.0
        if: steps.cache.outputs.cache-hit != 'true'
        with:
          path: nix-index.closure
@@ -89,7 +89,7 @@ jobs:
       x86_64-linux: ${{ steps.hash.outputs.x86_64-linux }}
     steps:
      - uses: cachix/install-nix-action@v31.10.6
-     - uses: actions/cache/restore@v5
+     - uses: actions/cache/restore@v6.1.0
        with:
          path: nix-index.closure
          key: nix-index-${{ needs.build-nix-index.outputs.commit }}
