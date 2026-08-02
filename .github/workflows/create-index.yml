@@ -23,7 +23,7 @@ jobs:
         run: |
           COMMIT=$(gh api \
             -H "Accept: application/vnd.github.sha" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
             "/repos/nixos/nixpkgs/commits/${NIXPKGS_BRANCH}"
           )
           echo "commit=${COMMIT}" >> "${GITHUB_OUTPUT}"
